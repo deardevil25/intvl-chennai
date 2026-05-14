@@ -1,12 +1,12 @@
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 const players = [
-  { rank: 1, name: 'Karthik R', area: 'T. Nagar', streets: 47, km: 312 },
-  { rank: 2, name: 'Priya S', area: 'Adyar', streets: 38, km: 267 },
-  { rank: 3, name: 'Arjun M', area: 'Anna Nagar', streets: 31, km: 198 },
-  { rank: 4, name: 'Divya K', area: 'Velachery', streets: 24, km: 154 },
-  { rank: 5, name: 'Surya P', area: 'Guindy', streets: 19, km: 121 },
-  { rank: 6, name: 'Meena L', area: 'Mylapore', streets: 14, km: 98 },
+  { rank: 1, name: 'Elackeya R', area: 'Ambattur', streets: 47, km: 312 },
+  { rank: 2, name: 'Riya S', area: 'Adyar', streets: 38, km: 267 },
+  { rank: 3, name: 'Luffy D', area: 'Anna Nagar', streets: 31, km: 198 },
+  { rank: 4, name: 'Rohan S', area: 'Velachery', streets: 24, km: 154 },
+  { rank: 5, name: 'Pranav P', area: 'Guindy', streets: 19, km: 121 },
+  { rank: 6, name: 'Aazhi ER', area: 'Mylapore', streets: 14, km: 98 },
   { rank: 7, name: 'Rishi', area: 'Your area', streets: 0, km: 0 },
 ];
 
