@@ -1,14 +1,15 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useFocusEffect } from 'expo-router';
+import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { db } from '../firebaseConfig';
 
-const players = [
-  { rank: 1, name: 'Elackeya R', area: 'Ambattur', streets: 47, km: 312 },
-  { rank: 2, name: 'Riya S', area: 'Adyar', streets: 38, km: 267 },
-  { rank: 3, name: 'Luffy D', area: 'Anna Nagar', streets: 31, km: 198 },
-  { rank: 4, name: 'Rohan S', area: 'Velachery', streets: 24, km: 154 },
-  { rank: 5, name: 'Pranav P', area: 'Guindy', streets: 19, km: 121 },
-  { rank: 6, name: 'Aazhi ER', area: 'Mylapore', streets: 14, km: 98 },
-  { rank: 7, name: 'Rishi', area: 'Your area', streets: 0, km: 0 },
-];
+type Player = {
+  userId: string;
+  totalKm: number;
+  totalPoints: number;
+  runs: number;
+};
 
 const medalColor = (rank: number) => {
   if (rank === 1) return '#FFD700';
@@ -25,146 +26,127 @@ const medalText = (rank: number) => {
 };
 
 export default function Leaderboard() {
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchLeaderboard();
+    }, [])
+  );
+
+  const fetchLeaderboard = async () => {
+    setLoading(true);
+    try {
+      const q = query(collection(db, 'runs'), orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(q);
+
+      const playerMap: Record<string, Player> = {};
+
+      snapshot.forEach((doc) => {
+        const run = doc.data();
+        const uid = run.userId || 'unknown';
+        if (!playerMap[uid]) {
+          playerMap[uid] = { userId: uid, totalKm: 0, totalPoints: 0, runs: 0 };
+        }
+        playerMap[uid].totalKm += parseFloat(run.distance || 0);
+        playerMap[uid].totalPoints += run.points || 0;
+        playerMap[uid].runs += 1;
+      });
+
+      const sorted = Object.values(playerMap).sort((a, b) => b.totalPoints - a.totalPoints);
+      setPlayers(sorted);
+    } catch (e) {
+      console.log('Leaderboard error:', e);
+    }
+    setLoading(false);
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
 
-      {/* Header */}
       <Text style={styles.heading}>Chennai Rankings</Text>
-      <Text style={styles.sub}>Top street owners this month</Text>
+      <Text style={styles.sub}>Real runners · Live data 🔥</Text>
 
-      {/* Top 3 Podium */}
-      <View style={styles.podium}>
-        {players.slice(0, 3).map((p) => (
-          <View key={p.rank} style={[styles.podiumCard, { borderColor: medalColor(p.rank) }]}>
-            <Text style={styles.podiumMedal}>{medalText(p.rank)}</Text>
-            <Text style={styles.podiumName}>{p.name.split(' ')[0]}</Text>
-            <Text style={styles.podiumStreets}>{p.streets} streets</Text>
-          </View>
-        ))}
-      </View>
+      {loading ? (
+        <View style={styles.loadingBox}>
+          <ActivityIndicator color="#00ff88" size="large" />
+          <Text style={styles.loadingText}>Fetching runners...</Text>
+        </View>
+      ) : players.length === 0 ? (
+        <View style={styles.emptyBox}>
+          <Text style={styles.emptyText}>No runners yet!</Text>
+          <Text style={styles.emptySub}>Be the first to claim Chennai streets 🏃</Text>
+        </View>
+      ) : (
+        <>
+          {/* Top 3 Podium */}
+          {players.length >= 1 && (
+            <View style={styles.podium}>
+              {players.slice(0, Math.min(3, players.length)).map((p, i) => (
+                <View key={p.userId} style={[styles.podiumCard, { borderColor: medalColor(i + 1) }]}>
+                  <Text style={styles.podiumMedal}>{medalText(i + 1)}</Text>
+                  <Text style={styles.podiumName}>{p.userId.split('@')[0]}</Text>
+                  <Text style={styles.podiumStreets}>{p.totalPoints} pts</Text>
+                </View>
+              ))}
+            </View>
+          )}
 
-      {/* Full List */}
-      <View style={styles.list}>
-        {players.map((p) => (
-          <View
-            key={p.rank}
-            style={[styles.row, p.name === 'Rishi' && styles.youRow]}
-          >
-            <Text style={[styles.rankNum, { color: medalColor(p.rank) }]}>
-              {medalText(p.rank)}
-            </Text>
-            <View style={styles.playerInfo}>
-              <Text style={[styles.playerName, p.name === 'Rishi' && styles.youText]}>
-                {p.name} {p.name === 'Rishi' ? '(you)' : ''}
-              </Text>
-              <Text style={styles.playerArea}>{p.area}</Text>
-            </View>
-            <View style={styles.playerStats}>
-              <Text style={styles.streetsCount}>{p.streets}</Text>
-              <Text style={styles.streetsLabel}>streets</Text>
-            </View>
+          {/* Full list */}
+          <View style={styles.list}>
+            {players.map((p, i) => (
+              <View
+                key={p.userId}
+                style={[styles.row, p.userId === 'rishi' && styles.youRow]}
+              >
+                <Text style={[styles.rankNum, { color: medalColor(i + 1) }]}>
+                  {medalText(i + 1)}
+                </Text>
+                <View style={styles.playerInfo}>
+                  <Text style={[styles.playerName, p.userId === 'rishi' && styles.youText]}>
+                    {p.userId} {p.userId === 'rishi' ? '(you)' : ''}
+                  </Text>
+                  <Text style={styles.playerArea}>{p.runs} runs · {p.totalKm.toFixed(2)} km</Text>
+                </View>
+                <View style={styles.playerStats}>
+                  <Text style={styles.streetsCount}>{p.totalPoints}</Text>
+                  <Text style={styles.streetsLabel}>pts</Text>
+                </View>
+              </View>
+            ))}
           </View>
-        ))}
-      </View>
+        </>
+      )}
 
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0a0a0a',
-  },
-  content: {
-    padding: 24,
-    paddingTop: 60,
-  },
-  heading: {
-    color: '#fff',
-    fontSize: 26,
-    fontWeight: 'bold',
-  },
-  sub: {
-    color: '#555',
-    fontSize: 13,
-    marginTop: 4,
-    marginBottom: 24,
-  },
-  podium: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 28,
-  },
-  podiumCard: {
-    flex: 1,
-    backgroundColor: '#111',
-    borderRadius: 16,
-    padding: 14,
-    alignItems: 'center',
-    borderWidth: 1,
-  },
-  podiumMedal: {
-    fontSize: 24,
-    marginBottom: 6,
-  },
-  podiumName: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: 'bold',
-  },
-  podiumStreets: {
-    color: '#555',
-    fontSize: 11,
-    marginTop: 2,
-  },
-  list: {
-    gap: 10,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#111',
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 0.5,
-    borderColor: '#222',
-  },
-  youRow: {
-    borderColor: '#00ff88',
-    borderWidth: 1,
-  },
-  rankNum: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    width: 36,
-  },
-  playerInfo: {
-    flex: 1,
-  },
-  playerName: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  youText: {
-    color: '#00ff88',
-  },
-  playerArea: {
-    color: '#555',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  playerStats: {
-    alignItems: 'flex-end',
-  },
-  streetsCount: {
-    color: '#00ff88',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  streetsLabel: {
-    color: '#555',
-    fontSize: 11,
-  },
+  container: { flex: 1, backgroundColor: '#0a0a0a' },
+  content: { padding: 24, paddingTop: 60, paddingBottom: 40 },
+  heading: { color: '#fff', fontSize: 26, fontWeight: 'bold' },
+  sub: { color: '#555', fontSize: 13, marginTop: 4, marginBottom: 24 },
+  loadingBox: { alignItems: 'center', marginTop: 60, gap: 16 },
+  loadingText: { color: '#555', fontSize: 14 },
+  emptyBox: { alignItems: 'center', marginTop: 60 },
+  emptyText: { color: '#fff', fontSize: 18, fontWeight: 'bold' },
+  emptySub: { color: '#555', fontSize: 13, marginTop: 8, textAlign: 'center' },
+  podium: { flexDirection: 'row', gap: 10, marginBottom: 28 },
+  podiumCard: { flex: 1, backgroundColor: '#111', borderRadius: 16, padding: 14, alignItems: 'center', borderWidth: 1 },
+  podiumMedal: { fontSize: 24, marginBottom: 6 },
+  podiumName: { color: '#fff', fontSize: 13, fontWeight: 'bold' },
+  podiumStreets: { color: '#555', fontSize: 11, marginTop: 2 },
+  list: { gap: 10 },
+  row: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#111', borderRadius: 14, padding: 16, borderWidth: 0.5, borderColor: '#222' },
+  youRow: { borderColor: '#00ff88', borderWidth: 1 },
+  rankNum: { fontSize: 18, fontWeight: 'bold', width: 36 },
+  playerInfo: { flex: 1 },
+  playerName: { color: '#fff', fontSize: 15, fontWeight: '500' },
+  youText: { color: '#00ff88' },
+  playerArea: { color: '#555', fontSize: 12, marginTop: 2 },
+  playerStats: { alignItems: 'flex-end' },
+  streetsCount: { color: '#00ff88', fontSize: 18, fontWeight: 'bold' },
+  streetsLabel: { color: '#555', fontSize: 11 },
 });

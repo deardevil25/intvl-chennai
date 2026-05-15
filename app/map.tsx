@@ -1,8 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
+import { addDoc, collection } from 'firebase/firestore';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { PROVIDER_GOOGLE, Polyline } from 'react-native-maps';
+import { db } from '../firebaseConfig';
 
 const CHENNAI = {
   latitude: 13.0827,
@@ -55,8 +57,21 @@ export default function Map() {
       const updated = [newRun, ...pastRuns];
       await AsyncStorage.setItem('runs', JSON.stringify(updated));
       setPastRuns(updated);
+
+      // Save to Firebase
+      await addDoc(collection(db, 'runs'), {
+        userId: 'rishi',
+        date: newRun.date,
+        distance: newRun.distance,
+        points: newRun.points,
+        coords: coords,
+        createdAt: Date.now(),
+      });
+
       return newRun;
-    } catch (e) {}
+    } catch (e) {
+      console.log('Save error:', e);
+    }
   };
 
   const calcDistance = (coords: any[]) => {
@@ -121,7 +136,6 @@ export default function Map() {
         showsUserLocation={true}
         followsUserLocation={tracking}
       >
-        {/* Current run - bright green */}
         {routeCoords.length > 1 && (
           <Polyline
             coordinates={routeCoords}
@@ -129,7 +143,6 @@ export default function Map() {
             strokeWidth={4}
           />
         )}
-        {/* Past runs - dim green */}
         {pastRuns.map((run) => (
           run.coords?.length > 1 && (
             <Polyline
@@ -142,7 +155,6 @@ export default function Map() {
         ))}
       </MapView>
 
-      {/* Top bar */}
       <View style={styles.topBar}>
         <View style={styles.topBarInner}>
           <View>
@@ -161,7 +173,6 @@ export default function Map() {
         </View>
       </View>
 
-      {/* Bottom button */}
       <View style={styles.bottomBar}>
         <TouchableOpacity
           style={[styles.trackBtn, tracking && styles.trackBtnActive]}

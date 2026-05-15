@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "335501679079",
+    "project_id": "intvl-chennai-5b210",
+    "storage_bucket": "intvl-chennai-5b210.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:335501679079:android:26a6dc2b40cb6cc9ad8542",
+        "android_client_info": {
+          "package_name": "com.deardevil25.intvlchennai"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA6JXbFkAsqP6CnbITqTJG2EnaTzvqXQU4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
