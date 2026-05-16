@@ -1,14 +1,27 @@
 import { router } from 'expo-router';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { auth } from '../firebaseConfig';
+import { Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { auth, db } from '../firebaseConfig';
+
+const COLORS = [
+  { name: 'Green', hex: '#00ff88' },
+  { name: 'Red', hex: '#ff4444' },
+  { name: 'Blue', hex: '#4488ff' },
+  { name: 'Yellow', hex: '#ffdd00' },
+  { name: 'Purple', hex: '#aa44ff' },
+  { name: 'Orange', hex: '#ff8800' },
+  { name: 'Pink', hex: '#ff44aa' },
+  { name: 'Teal', hex: '#00ddcc' },
+];
 
 export default function Login() {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [selectedColor, setSelectedColor] = useState('#00ff88');
   const [loading, setLoading] = useState(false);
 
   const handleAuth = async () => {
@@ -25,6 +38,11 @@ export default function Login() {
       if (mode === 'signup') {
         const cred = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(cred.user, { displayName: name });
+        await setDoc(doc(db, 'users', name), {
+          name,
+          color: selectedColor,
+          createdAt: Date.now(),
+        });
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
@@ -40,25 +58,46 @@ export default function Login() {
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.content}>
+      <ScrollView contentContainerStyle={styles.content}>
 
-        {/* Logo */}
         <Text style={styles.logo}>INTVL</Text>
         <Text style={styles.logoSub}>Chennai</Text>
         <Text style={styles.tagline}>Own the streets. Run your city.</Text>
 
-        {/* Form */}
         <View style={styles.form}>
           {mode === 'signup' && (
-            <TextInput
-              style={styles.input}
-              placeholder="Your name"
-              placeholderTextColor="#555"
-              value={name}
-              onChangeText={setName}
-              autoCapitalize="words"
-            />
+            <>
+              <TextInput
+                style={styles.input}
+                placeholder="Your name"
+                placeholderTextColor="#555"
+                value={name}
+                onChangeText={setName}
+                autoCapitalize="words"
+              />
+
+              {/* Color Picker */}
+              <Text style={styles.colorLabel}>Pick your territory color:</Text>
+              <View style={styles.colorGrid}>
+                {COLORS.map((c) => (
+                  <TouchableOpacity
+                    key={c.hex}
+                    style={[
+                      styles.colorBtn,
+                      { backgroundColor: c.hex },
+                      selectedColor === c.hex && styles.colorBtnSelected,
+                    ]}
+                    onPress={() => setSelectedColor(c.hex)}
+                  >
+                    {selectedColor === c.hex && (
+                      <Text style={styles.colorCheck}>✓</Text>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
           )}
+
           <TextInput
             style={styles.input}
             placeholder="Email"
@@ -96,35 +135,25 @@ export default function Login() {
             </Text>
           </TouchableOpacity>
         </View>
-
-      </View>
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0a0a0a' },
-  content: { flex: 1, padding: 32, justifyContent: 'center' },
+  content: { flexGrow: 1, padding: 32, justifyContent: 'center' },
   logo: { fontSize: 48, fontWeight: 'bold', color: '#00ff88', letterSpacing: 6, textAlign: 'center' },
   logoSub: { fontSize: 18, color: '#fff', letterSpacing: 4, textAlign: 'center', marginTop: 4 },
   tagline: { fontSize: 13, color: '#555', textAlign: 'center', marginTop: 8, marginBottom: 48 },
   form: { gap: 14 },
-  input: {
-    backgroundColor: '#111',
-    borderRadius: 14,
-    padding: 16,
-    color: '#fff',
-    fontSize: 15,
-    borderWidth: 0.5,
-    borderColor: '#222',
-  },
-  btn: {
-    backgroundColor: '#00ff88',
-    borderRadius: 14,
-    padding: 18,
-    alignItems: 'center',
-    marginTop: 8,
-  },
+  input: { backgroundColor: '#111', borderRadius: 14, padding: 16, color: '#fff', fontSize: 15, borderWidth: 0.5, borderColor: '#222' },
+  colorLabel: { color: '#888', fontSize: 13, marginBottom: 4 },
+  colorGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  colorBtn: { width: 52, height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  colorBtnSelected: { borderWidth: 3, borderColor: '#fff' },
+  colorCheck: { color: '#fff', fontSize: 22, fontWeight: 'bold' },
+  btn: { backgroundColor: '#00ff88', borderRadius: 14, padding: 18, alignItems: 'center', marginTop: 8 },
   btnDisabled: { opacity: 0.6 },
   btnText: { color: '#0a0a0a', fontSize: 16, fontWeight: 'bold' },
   switchBtn: { alignItems: 'center', padding: 8 },
