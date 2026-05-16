@@ -1,23 +1,44 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useState } from 'react';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { collection, getDocs, orderBy, query, where } from 'firebase/firestore';
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { auth, db } from '../firebaseConfig';
 
 export default function Index() {
   const [runs, setRuns] = useState<any[]>([]);
+  const [displayName, setDisplayName] = useState('');
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const name = user.displayName || user.email?.split('@')[0] || 'Runner';
+        setDisplayName(name);
+      }
+    });
+    return unsub;
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
-      loadRuns();
-    }, [])
+      if (displayName) loadRuns();
+    }, [displayName])
   );
 
   const loadRuns = async () => {
     try {
-      const saved = await AsyncStorage.getItem('runs');
-      if (saved) setRuns(JSON.parse(saved));
-    } catch (e) {}
+      const q = query(
+        collection(db, 'runs'),
+        where('userId', '==', displayName),
+        orderBy('createdAt', 'desc')
+      );
+      const snapshot = await getDocs(q);
+      const firebaseRuns = snapshot.docs.map(doc => doc.data());
+      setRuns(firebaseRuns);
+    } catch (e) {
+      console.log('Load runs error:', e);
+    }
   };
 
   const totalKm = runs.reduce((sum, r) => sum + parseFloat(r.distance || 0), 0);
@@ -30,22 +51,30 @@ export default function Index() {
     return 'Good evening 👋';
   };
 
+  const handleLogout = () => {
+    Alert.alert('Log out', 'Are you sure?', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Log out', style: 'destructive', onPress: async () => {
+        await signOut(auth);
+        router.replace('/login' as any);
+      }},
+    ]);
+  };
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       <StatusBar style="light" />
 
-      {/* Header */}
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>{getGreeting()}</Text>
-          <Text style={styles.username}>Rishi</Text>
+          <Text style={styles.username}>{displayName || '...'}</Text>
         </View>
         <View style={styles.levelBadge}>
           <Text style={styles.levelText}>LVL {runs.length < 5 ? 1 : runs.length < 15 ? 2 : 3}</Text>
         </View>
       </View>
 
-      {/* Stats Grid */}
       <View style={styles.statsGrid}>
         <View style={styles.statCard}>
           <Text style={styles.statValue}>{totalKm.toFixed(1)}</Text>
@@ -65,7 +94,6 @@ export default function Index() {
         </View>
       </View>
 
-      {/* Start Run Button */}
       <TouchableOpacity
         style={styles.startButton}
         onPress={() => alert('Go to the Map tab to start a run!')}
@@ -75,7 +103,6 @@ export default function Index() {
         <Text style={styles.startSub}>Claim your streets</Text>
       </TouchableOpacity>
 
-      {/* Recent Activity */}
       <Text style={styles.sectionTitle}>Recent Activity</Text>
 
       {runs.length === 0 ? (
@@ -85,8 +112,8 @@ export default function Index() {
         </View>
       ) : (
         <View style={styles.runList}>
-          {runs.slice(0, 5).map((run) => (
-            <View key={run.id} style={styles.runRow}>
+          {runs.slice(0, 5).map((run, index) => (
+            <View key={index} style={styles.runRow}>
               <Text style={styles.runIcon}>🏃</Text>
               <View style={styles.runInfo}>
                 <Text style={styles.runDistance}>{run.distance} km</Text>
@@ -100,6 +127,10 @@ export default function Index() {
           ))}
         </View>
       )}
+
+      <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+        <Text style={styles.logoutText}>Log out</Text>
+      </TouchableOpacity>
 
     </ScrollView>
   );
@@ -134,4 +165,6 @@ const styles = StyleSheet.create({
   runPoints: { alignItems: 'flex-end' },
   runPointsValue: { color: '#00ff88', fontSize: 20, fontWeight: 'bold' },
   runPointsLabel: { color: '#555', fontSize: 11 },
+  logoutBtn: { alignItems: 'center', padding: 16, marginTop: 16 },
+  logoutText: { color: '#333', fontSize: 14 },
 });

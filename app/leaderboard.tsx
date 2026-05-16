@@ -2,7 +2,7 @@ import { useFocusEffect } from 'expo-router';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { useCallback, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { db } from '../firebaseConfig';
+import { auth, db } from '../firebaseConfig';
 
 type Player = {
   userId: string;
@@ -28,6 +28,11 @@ const medalText = (rank: number) => {
 export default function Leaderboard() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const getMyId = () => {
+    const user = auth.currentUser;
+    return user?.displayName || user?.email?.split('@')[0] || 'runner';
+  };
 
   useFocusEffect(
     useCallback(() => {
@@ -80,7 +85,6 @@ export default function Leaderboard() {
         </View>
       ) : (
         <>
-          {/* Top 3 Podium */}
           {players.length >= 1 && (
             <View style={styles.podium}>
               {players.slice(0, Math.min(3, players.length)).map((p, i) => (
@@ -93,28 +97,27 @@ export default function Leaderboard() {
             </View>
           )}
 
-          {/* Full list */}
           <View style={styles.list}>
-            {players.map((p, i) => (
-              <View
-                key={p.userId}
-                style={[styles.row, p.userId === 'rishi' && styles.youRow]}
-              >
-                <Text style={[styles.rankNum, { color: medalColor(i + 1) }]}>
-                  {medalText(i + 1)}
-                </Text>
-                <View style={styles.playerInfo}>
-                  <Text style={[styles.playerName, p.userId === 'rishi' && styles.youText]}>
-                    {p.userId} {p.userId === 'rishi' ? '(you)' : ''}
+            {players.map((p, i) => {
+              const isMe = p.userId === getMyId();
+              return (
+                <View key={p.userId} style={[styles.row, isMe && styles.youRow]}>
+                  <Text style={[styles.rankNum, { color: medalColor(i + 1) }]}>
+                    {medalText(i + 1)}
                   </Text>
-                  <Text style={styles.playerArea}>{p.runs} runs · {p.totalKm.toFixed(2)} km</Text>
+                  <View style={styles.playerInfo}>
+                    <Text style={[styles.playerName, isMe && styles.youText]}>
+                      {p.userId} {isMe ? '(you)' : ''}
+                    </Text>
+                    <Text style={styles.playerArea}>{p.runs} runs · {p.totalKm.toFixed(2)} km</Text>
+                  </View>
+                  <View style={styles.playerStats}>
+                    <Text style={styles.streetsCount}>{p.totalPoints}</Text>
+                    <Text style={styles.streetsLabel}>pts</Text>
+                  </View>
                 </View>
-                <View style={styles.playerStats}>
-                  <Text style={styles.streetsCount}>{p.totalPoints}</Text>
-                  <Text style={styles.streetsLabel}>pts</Text>
-                </View>
-              </View>
-            ))}
+              );
+            })}
           </View>
         </>
       )}

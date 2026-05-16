@@ -4,7 +4,7 @@ import { addDoc, collection } from 'firebase/firestore';
 import { useEffect, useRef, useState } from 'react';
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import MapView, { PROVIDER_GOOGLE, Polyline } from 'react-native-maps';
-import { db } from '../firebaseConfig';
+import { auth, db } from '../firebaseConfig';
 
 const CHENNAI = {
   latitude: 13.0827,
@@ -45,6 +45,11 @@ export default function Map() {
     } catch (e) {}
   };
 
+  const getUserId = () => {
+    const user = auth.currentUser;
+    return user?.displayName || user?.email?.split('@')[0] || 'runner';
+  };
+
   const saveRun = async (coords: any[], dist: number) => {
     try {
       const newRun = {
@@ -58,9 +63,8 @@ export default function Map() {
       await AsyncStorage.setItem('runs', JSON.stringify(updated));
       setPastRuns(updated);
 
-      // Save to Firebase
       await addDoc(collection(db, 'runs'), {
-        userId: 'rishi',
+        userId: getUserId(),
         date: newRun.date,
         distance: newRun.distance,
         points: newRun.points,

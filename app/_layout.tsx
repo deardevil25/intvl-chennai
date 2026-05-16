@@ -1,7 +1,26 @@
-import { Tabs } from 'expo-router';
+import { Tabs, router } from 'expo-router';
+import { onAuthStateChanged } from 'firebase/auth';
+import { useEffect, useState } from 'react';
 import { Text } from 'react-native';
+import { auth } from '../firebaseConfig';
 
 export default function Layout() {
+  const [checked, setChecked] = useState(false);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+  setChecked(true);
+  if (!user) {
+    setTimeout(() => {
+      router.replace('/login' as any);
+    }, 100);
+  }
+});
+    return unsub;
+  }, []);
+
+  if (!checked) return null;
+
   return (
     <Tabs
       screenOptions={{
@@ -41,6 +60,10 @@ export default function Layout() {
           title: 'Profile',
           tabBarIcon: ({ color }) => <Text style={{ fontSize: 18, color }}>👤</Text>,
         }}
+      />
+      <Tabs.Screen
+        name="login"
+        options={{ href: null }}
       />
     </Tabs>
   );
