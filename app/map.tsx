@@ -230,7 +230,7 @@ export default function Map() {
       <View style={styles.topBar}>
         <View style={styles.topBarInner}>
           <View>
-            <Text style={styles.topBarText}>🗺️ Chennai</Text>
+            <Text style={styles.topBarText}>🗺️ Runners Territory</Text>
             <Text style={styles.runsText}>
               {territories.filter(t => t.userId === getUserId()).length} territories owned
             </Text>

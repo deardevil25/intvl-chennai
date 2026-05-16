@@ -60,8 +60,8 @@ export default function Login() {
     >
       <ScrollView contentContainerStyle={styles.content}>
 
-        <Text style={styles.logo}>INTVL</Text>
-        <Text style={styles.logoSub}>Chennai</Text>
+        <Text style={styles.logo}>RUNNERS</Text>
+        <Text style={styles.logoSub}>TERRITORY</Text>
         <Text style={styles.tagline}>Own the streets. Run your city.</Text>
 
         <View style={styles.form}>
